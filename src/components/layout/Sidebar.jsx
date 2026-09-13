@@ -2,7 +2,8 @@ import React from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   Home, Users, BookOpen, GraduationCap,
-  BookMarked, Calendar, ShieldAlert, FileText, Settings
+  BookMarked, Calendar, ShieldAlert, FileText, Settings,
+  ClipboardCheck, BarChart3, Award
 } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext.jsx'
 import { cn } from '../../lib/utils.js'
@@ -13,6 +14,9 @@ const navItems = [
   { to: '/sections',      icon: BookOpen,    key: 'sections' },
   { to: '/teachers',      icon: GraduationCap, key: 'teachers' },
   { to: '/subjects',      icon: BookMarked,  key: 'subjects' },
+  { to: '/attendance',    icon: ClipboardCheck, key: 'attendance' },
+  { to: '/reports',       icon: BarChart3,    key: 'reports' },
+  { to: '/certificates',  icon: Award,        key: 'certificates' },
   { to: '/timetable',     icon: Calendar,    key: 'timetable' },
   { to: '/violations',    icon: ShieldAlert, key: 'violations' },
   { to: '/subject-forms', icon: FileText,    key: 'subject_forms' },

@@ -18,6 +18,17 @@ function SectionDialog({ open, section, onClose, onSave }) {
     capacity: section?.capacity ?? 30,
     room_number: section?.room_number || '',
   })
+
+  const gradeLabelMap = {
+    5: 'الخامس',
+    6: 'السادس',
+    7: 'السابع',
+    8: 'الثامن',
+    9: 'التاسع',
+    10: 'العاشر',
+    11: 'الحادي عشر',
+    12: 'الثاني عشر',
+  }
   const [errors, setErrors] = useState({})
 
   // مزامنة النموذج عند فتح Dialog مختلف
@@ -36,7 +47,6 @@ function SectionDialog({ open, section, onClose, onSave }) {
 
   const validate = () => {
     const e = {}
-    if (!form.name.trim()) e.name = t('common.required')
     if (!form.grade) e.grade = t('common.required')
     return e
   }
@@ -45,9 +55,15 @@ function SectionDialog({ open, section, onClose, onSave }) {
     e.preventDefault()
     const e2 = validate()
     if (Object.keys(e2).length) { setErrors(e2); return }
+
+    const sectionNumber = String(form.letter || '1').trim() || '1'
+    const autoName = `${gradeLabelMap[Number(form.grade)] || 'الصف'} / ${sectionNumber}`
+
     onSave({
       ...form,
+      name: form.name?.trim() || autoName,
       grade: Number(form.grade),
+      letter: sectionNumber,
       capacity: Number(form.capacity) || 30,
     })
   }
@@ -64,16 +80,16 @@ function SectionDialog({ open, section, onClose, onSave }) {
           {isEdit ? t('sections.edit_section') : t('sections.add_section')}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* اسم الشعبة */}
+          {/* اسم الصف */}
           <div>
             <label className="block text-sm font-medium font-cairo text-foreground mb-1">
-              {t('sections.section_name')} <span className="text-destructive">*</span>
+              اسم الصف
             </label>
             <input
               className="input-base"
               value={form.name}
               onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder={t('sections.section_name')}
+              placeholder="حادي عشر / 1"
             />
             {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
           </div>
@@ -96,17 +112,19 @@ function SectionDialog({ open, section, onClose, onSave }) {
             {errors.grade && <p className="text-xs text-destructive mt-1">{errors.grade}</p>}
           </div>
 
-          {/* الحرف */}
+          {/* رقم الشعبة */}
           <div>
             <label className="block text-sm font-medium font-cairo text-foreground mb-1">
-              {t('sections.letter')}
+              رقم الشعبة
             </label>
             <input
               className="input-base"
+              type="number"
+              min={1}
+              max={20}
               value={form.letter}
               onChange={(e) => setForm(f => ({ ...f, letter: e.target.value }))}
-              placeholder="أ / A"
-              maxLength={2}
+              placeholder="1"
             />
           </div>
 
@@ -271,7 +289,7 @@ export default function SectionsPage() {
                       {section.name}
                     </h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {section.grade ? `${t('common.grade')} ${section.grade}` : ''}
+                      {section.grade ? `${gradeLabelMap[Number(section.grade)] || 'الصف'} / ${section.letter || 1}` : ''}
                       {section.letter ? ` / ${section.letter}` : ''}
                     </p>
                   </div>

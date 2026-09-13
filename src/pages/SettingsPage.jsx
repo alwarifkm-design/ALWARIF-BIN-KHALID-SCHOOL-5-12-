@@ -25,6 +25,7 @@ export default function SettingsPage() {
   const [registrationCode, setRegistrationCode] = useState(base44Client.auth.getRegistrationCode())
   const [showPasswords, setShowPasswords] = useState({})
   const [managerPassword, setManagerPassword] = useState('Admin@123')
+  const [schoolSettings, setSchoolSettings] = useState(base44Client.auth.getSchoolSettings())
 
   const isAdmin = user?.role === 'admin'
 
@@ -129,6 +130,18 @@ export default function SettingsPage() {
     alert('تم تحديث كلمة مرور المدير بنجاح')
   }
 
+  const handleSchoolSettingsSave = () => {
+    const next = base44Client.auth.saveSchoolSettings({
+      ...schoolSettings,
+      school_name: schoolSettings.school_name?.trim() || 'الوارف بن خالد 5-12',
+      school_name_en: schoolSettings.school_name_en?.trim() || 'Alwarif Bin Khalid 5-12',
+      school_subtitle: schoolSettings.school_subtitle?.trim() || 'نظام إدارة المدرسة',
+      school_subtitle_en: schoolSettings.school_subtitle_en?.trim() || 'School Management System',
+    })
+    setSchoolSettings(next)
+    alert('تم حفظ بيانات المدرسة بنجاح')
+  }
+
   if (!isAdmin) {
     return (
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
@@ -175,6 +188,84 @@ export default function SettingsPage() {
             }`}
           >
             English
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <KeyRound className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-bold font-cairo text-foreground">بيانات المدرسة</h2>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-lg border border-border bg-background p-3">
+            <label className="mb-2 block text-sm font-medium text-foreground">اسم المدرسة عربي</label>
+            <input
+              value={schoolSettings.school_name || ''}
+              onChange={(e) => setSchoolSettings((prev) => ({ ...prev, school_name: e.target.value }))}
+              className="input-base"
+            />
+          </div>
+
+          <div className="rounded-lg border border-border bg-background p-3">
+            <label className="mb-2 block text-sm font-medium text-foreground">اسم المدرسة English</label>
+            <input
+              value={schoolSettings.school_name_en || ''}
+              onChange={(e) => setSchoolSettings((prev) => ({ ...prev, school_name_en: e.target.value }))}
+              className="input-base"
+            />
+          </div>
+
+          <div className="rounded-lg border border-border bg-background p-3">
+            <label className="mb-2 block text-sm font-medium text-foreground">العنوان الفرعي عربي</label>
+            <input
+              value={schoolSettings.school_subtitle || ''}
+              onChange={(e) => setSchoolSettings((prev) => ({ ...prev, school_subtitle: e.target.value }))}
+              className="input-base"
+            />
+          </div>
+
+          <div className="rounded-lg border border-border bg-background p-3">
+            <label className="mb-2 block text-sm font-medium text-foreground">العنوان الفرعي English</label>
+            <input
+              value={schoolSettings.school_subtitle_en || ''}
+              onChange={(e) => setSchoolSettings((prev) => ({ ...prev, school_subtitle_en: e.target.value }))}
+              className="input-base"
+            />
+          </div>
+
+          <div className="rounded-lg border border-border bg-background p-3">
+            <label className="mb-2 block text-sm font-medium text-foreground">الهاتف</label>
+            <input
+              value={schoolSettings.phone || ''}
+              onChange={(e) => setSchoolSettings((prev) => ({ ...prev, phone: e.target.value }))}
+              className="input-base"
+            />
+          </div>
+
+          <div className="rounded-lg border border-border bg-background p-3">
+            <label className="mb-2 block text-sm font-medium text-foreground">البريد الإلكتروني</label>
+            <input
+              value={schoolSettings.email || ''}
+              onChange={(e) => setSchoolSettings((prev) => ({ ...prev, email: e.target.value }))}
+              className="input-base"
+            />
+          </div>
+
+          <div className="md:col-span-2 rounded-lg border border-border bg-background p-3">
+            <label className="mb-2 block text-sm font-medium text-foreground">العنوان</label>
+            <input
+              value={schoolSettings.address || ''}
+              onChange={(e) => setSchoolSettings((prev) => ({ ...prev, address: e.target.value }))}
+              className="input-base"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button type="button" onClick={handleSchoolSettingsSave} className="rounded-md bg-primary px-4 py-2 text-sm text-white">
+            حفظ بيانات المدرسة
           </button>
         </div>
       </section>

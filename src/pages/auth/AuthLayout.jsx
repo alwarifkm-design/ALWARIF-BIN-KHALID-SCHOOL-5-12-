@@ -1,9 +1,11 @@
 import React from 'react'
 import { useLanguage } from '../../contexts/LanguageContext.jsx'
+import { base44Client } from '../../api/base44Client.js'
 import logoUrl from '../../../1.png'
 
 export default function AuthLayout({ title, description, children }) {
   const { t, language, toggleLanguage } = useLanguage()
+  const schoolSettings = base44Client.auth.getSchoolSettings()
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -24,10 +26,10 @@ export default function AuthLayout({ title, description, children }) {
             className="w-16 h-16 object-contain mb-3"
           />
           <h1 className="text-xl font-bold font-cairo text-foreground">
-            {language === 'ar' ? t('common.school_name') : t('common.school_name_en')}
+            {language === 'ar' ? (schoolSettings.school_name || t('common.school_name')) : (schoolSettings.school_name_en || t('common.school_name_en'))}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {language === 'ar' ? t('common.school_subtitle') : t('common.school_subtitle_en')}
+            {language === 'ar' ? (schoolSettings.school_subtitle || t('common.school_subtitle')) : (schoolSettings.school_subtitle_en || t('common.school_subtitle_en'))}
           </p>
         </div>
 

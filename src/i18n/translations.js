@@ -7,6 +7,9 @@ export const translations = {
       teachers: 'المعلمون',
       subjects: 'المواد',
       timetable: 'الجدول',
+      attendance: 'الحضور',
+      reports: 'التقارير',
+      certificates: 'الشهادات',
       violations: 'المخالفات',
       subject_forms: 'الاستمارات',
       settings: 'الإعدادات',
@@ -168,6 +171,23 @@ export const translations = {
         thu: 'الخميس',
         fri: 'الجمعة',
       },
+    },
+    attendance: {
+      title: 'الحضور والغياب',
+      subtitle: 'تسجيل حضور الطلاب يومياً',
+      status: 'الحالة',
+      total_students: 'إجمالي الطلاب',
+      present: 'حاضر',
+      absent: 'غائب',
+      late: 'متأخر',
+    },
+    reports: {
+      title: 'التقارير',
+      subtitle: 'ملخص الأداء والغياب والمخالفات',
+    },
+    certificates: {
+      title: 'الشهادات',
+      subtitle: 'إصدار شهادات الطلاب وطباعة النسخ الرسمية',
     },
     violations: {
       title: 'المخالفات',

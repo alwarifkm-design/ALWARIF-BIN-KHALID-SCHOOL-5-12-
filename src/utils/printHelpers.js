@@ -33,7 +33,31 @@ function buildHeader(titleAr, titleEn = '') {
 const PRINT_CSS = `
   <style>
     * { box-sizing: border-box; }
-    body { font-family: 'Cairo', 'Alexandria', sans-serif; direction: rtl; margin: 0; padding: 20px; color: #1f2937; }
+    body {
+      font-family: 'Cairo', 'Alexandria', sans-serif;
+      direction: rtl;
+      margin: 0;
+      padding: 20px;
+      color: #1f2937;
+      background: #fff;
+      position: relative;
+    }
+    body::before {
+      content: "الوارف بن خالد";
+      position: fixed;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%) rotate(-25deg);
+      font-size: 42px;
+      font-weight: 700;
+      color: rgba(6, 95, 70, 0.08);
+      letter-spacing: 2px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .print-shell {
+      position: relative;
+      z-index: 1;
+    }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th { background: #065f46; color: white; padding: 8px 10px; text-align: right; font-weight: 600; }
     td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
@@ -43,12 +67,51 @@ const PRINT_CSS = `
     .badge-red { background:#fee2e2; color:#991b1b; }
     .badge-yellow { background:#fef9c3; color:#854d0e; }
     .signature-line { display:inline-block; width:160px; border-bottom:1px solid #374151; margin-right:8px; }
+    .signature-box {
+      min-height: 54px;
+      display: flex;
+      align-items: end;
+      justify-content: center;
+      padding: 8px 0 0;
+    }
+    .signature-box img {
+      max-width: 180px;
+      max-height: 60px;
+      object-fit: contain;
+      display: block;
+    }
     @media print {
       body { padding: 10px; }
       .no-print { display: none !important; }
     }
   </style>
 `
+
+function renderGuardianSignature(student) {
+  const signatureData = student?.guardian_signature_data || student?.guardian_signature || ''
+  const signatureName = student?.guardian_name || 'ولي الأمر'
+
+  if (signatureData && typeof signatureData === 'string' && signatureData.startsWith('data:image')) {
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div class="signature-box">
+          <img src="${signatureData}" alt="توقيع ولي الأمر" />
+        </div>
+        <div style="border-top:1px solid #374151;width:190px"></div>
+        <div style="font-size:11px;color:#6b7280">${signatureName}</div>
+      </div>
+    `
+  }
+
+  return `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <div class="signature-box">
+        <div style="width:190px;border-bottom:1px solid #374151;height:38px"></div>
+      </div>
+      <div style="font-size:11px;color:#6b7280">${signatureName}</div>
+    </div>
+  `
+}
 
 /**
  * renderSectionList — سجل الشعبة الرسمي
@@ -75,27 +138,29 @@ export function renderSectionList(section, students = []) {
     <html lang="ar" dir="rtl">
     <head><meta charset="UTF-8"><title>سجل ${sectionName}</title>${PRINT_CSS}</head>
     <body>
-      ${buildHeader(`سجل الشعبة — ${sectionName}`, `Class Register — ${sectionName}`)}
-      <p style="font-size:12px;color:#4b5563;margin-bottom:12px">
-        عدد الطلاب: <strong>${students.length}</strong> | السعة: <strong>${section?.capacity || 30}</strong>
-        ${section?.room_number ? ` | رقم الغرفة: <strong>${section.room_number}</strong>` : ''}
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th style="width:40px;text-align:center">#</th>
-            <th>اسم الطالب</th>
-            <th>الرقم الوطني</th>
-            <th>تاريخ الميلاد</th>
-            <th>الجنس</th>
-            <th>اسم ولي الأمر</th>
-            <th>رقم الهاتف</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows || '<tr><td colspan="7" style="text-align:center;color:#9ca3af">لا يوجد طلاب</td></tr>'}
-        </tbody>
-      </table>
+      <div class="print-shell">
+        ${buildHeader(`سجل الشعبة — ${sectionName}`, `Class Register — ${sectionName}`)}
+        <p style="font-size:12px;color:#4b5563;margin-bottom:12px">
+          عدد الطلاب: <strong>${students.length}</strong> | السعة: <strong>${section?.capacity || 30}</strong>
+          ${section?.room_number ? ` | رقم الغرفة: <strong>${section.room_number}</strong>` : ''}
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px;text-align:center">#</th>
+              <th>اسم الطالب</th>
+              <th>الرقم الوطني</th>
+              <th>تاريخ الميلاد</th>
+              <th>الجنس</th>
+              <th>اسم ولي الأمر</th>
+              <th>رقم الهاتف</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="7" style="text-align:center;color:#9ca3af">لا يوجد طلاب</td></tr>'}
+          </tbody>
+        </table>
+      </div>
     </body>
     </html>
   `
@@ -194,58 +259,63 @@ export function renderSubjectForm(student, selections = [], subjects = []) {
     <html lang="ar" dir="rtl">
     <head><meta charset="UTF-8"><title>استمارة ${student?.name || ''}</title>${PRINT_CSS}</head>
     <body>
-      ${buildHeader('استمارة اختيار المواد الاختيارية', 'Elective Subjects Selection Form')}
+      <div class="print-shell">
+        ${buildHeader('استمارة اختيار المواد الاختيارية', 'Elective Subjects Selection Form')}
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;font-size:13px">
-        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px">
-          <h3 style="margin:0 0 10px;font-size:13px;color:#065f46;font-weight:700">بيانات الطالب</h3>
-          <p style="margin:4px 0"><strong>الاسم:</strong> ${student?.name || '—'}</p>
-          <p style="margin:4px 0"><strong>الصف:</strong> ${student?.grade ? `الصف ${student.grade}` : '—'}</p>
-          <p style="margin:4px 0"><strong>الرقم الوطني:</strong> ${student?.national_id || '—'}</p>
-          <p style="margin:4px 0"><strong>تاريخ الميلاد:</strong> ${student?.birthdate ? new Date(student.birthdate).toLocaleDateString('ar-SA') : '—'}</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;font-size:13px">
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+            <h3 style="margin:0 0 10px;font-size:13px;color:#065f46;font-weight:700">بيانات الطالب</h3>
+            <p style="margin:4px 0"><strong>الاسم:</strong> ${student?.name || '—'}</p>
+            <p style="margin:4px 0"><strong>الصف:</strong> ${student?.grade ? `الصف ${student.grade}` : '—'}</p>
+            <p style="margin:4px 0"><strong>الرقم الوطني:</strong> ${student?.national_id || '—'}</p>
+            <p style="margin:4px 0"><strong>تاريخ الميلاد:</strong> ${student?.birthdate ? new Date(student.birthdate).toLocaleDateString('ar-SA') : '—'}</p>
+          </div>
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+            <h3 style="margin:0 0 10px;font-size:13px;color:#065f46;font-weight:700">بيانات ولي الأمر</h3>
+            <p style="margin:4px 0"><strong>الاسم:</strong> ${student?.guardian_name || '—'}</p>
+            <p style="margin:4px 0"><strong>الهاتف:</strong> ${student?.guardian_phone || '—'}</p>
+            <p style="margin:4px 0"><strong>رقم الهوية:</strong> ${student?.guardian_national_id || '—'}</p>
+          </div>
         </div>
-        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px">
-          <h3 style="margin:0 0 10px;font-size:13px;color:#065f46;font-weight:700">بيانات ولي الأمر</h3>
-          <p style="margin:4px 0"><strong>الاسم:</strong> ${student?.guardian_name || '—'}</p>
-          <p style="margin:4px 0"><strong>الهاتف:</strong> ${student?.guardian_phone || '—'}</p>
-          <p style="margin:4px 0"><strong>رقم الهوية:</strong> ${student?.guardian_national_id || '—'}</p>
+
+        <h3 style="font-size:13px;color:#065f46;font-weight:700;margin-bottom:8px">اختيارات المواد</h3>
+        <table style="margin-bottom:24px">
+          <thead>
+            <tr>
+              <th style="width:60px;text-align:center">الأولوية</th>
+              <th>اسم المادة</th>
+              <th>Subject Name</th>
+              <th style="width:100px">الحالة</th>
+              <th style="width:110px">تاريخ الاختيار</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${selectionRows || '<tr><td colspan="5" style="text-align:center;color:#9ca3af">لا توجد اختيارات</td></tr>'}
+          </tbody>
+        </table>
+
+        <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:14px;margin-bottom:20px;font-size:12px">
+          <h3 style="margin:0 0 8px;font-size:13px;color:#92400e;font-weight:700">إقرار ولي الأمر</h3>
+          <p style="margin:0;line-height:1.7">
+            أنا الموقع أدناه ولي أمر الطالب المذكور أعلاه، أقر بموافقتي على اختيارات المواد المذكورة
+            وأتعهد بالتزام الطالب بالحضور والمشاركة في هذه المواد.
+          </p>
         </div>
-      </div>
 
-      <h3 style="font-size:13px;color:#065f46;font-weight:700;margin-bottom:8px">اختيارات المواد</h3>
-      <table style="margin-bottom:24px">
-        <thead>
-          <tr>
-            <th style="width:60px;text-align:center">الأولوية</th>
-            <th>اسم المادة</th>
-            <th>Subject Name</th>
-            <th style="width:100px">الحالة</th>
-            <th style="width:110px">تاريخ الاختيار</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${selectionRows || '<tr><td colspan="5" style="text-align:center;color:#9ca3af">لا توجد اختيارات</td></tr>'}
-        </tbody>
-      </table>
-
-      <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:14px;margin-bottom:20px;font-size:12px">
-        <h3 style="margin:0 0 8px;font-size:13px;color:#92400e;font-weight:700">إقرار ولي الأمر</h3>
-        <p style="margin:0;line-height:1.7">
-          أنا الموقع أدناه ولي أمر الطالب المذكور أعلاه، أقر بموافقتي على اختيارات المواد المذكورة
-          وأتعهد بالتزام الطالب بالحضور والمشاركة في هذه المواد.
-        </p>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:12px;margin-top:30px">
-        <div>
-          <p style="margin:0 0 30px;font-weight:600">توقيع ولي الأمر:</p>
-          <div style="border-bottom:1px solid #374151;height:1px;width:200px"></div>
-          <p style="margin:6px 0 0;color:#6b7280">${student?.guardian_name || ''}</p>
-        </div>
-        <div>
-          <p style="margin:0 0 30px;font-weight:600">توقيع المشرف:</p>
-          <div style="border-bottom:1px solid #374151;height:1px;width:200px"></div>
-          <p style="margin:6px 0 0;color:#6b7280">المشرف المسؤول</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:12px;margin-top:30px">
+          <div>
+            <p style="margin:0 0 10px;font-weight:600">توقيع ولي الأمر:</p>
+            ${renderGuardianSignature(student)}
+          </div>
+          <div>
+            <p style="margin:0 0 10px;font-weight:600">توقيع المشرف:</p>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+              <div class="signature-box">
+                <div style="width:190px;border-bottom:1px solid #374151;height:38px"></div>
+              </div>
+              <div style="font-size:11px;color:#6b7280">المشرف المسؤول</div>
+            </div>
+          </div>
         </div>
       </div>
     </body>
@@ -300,39 +370,46 @@ export function renderAllGrade10Forms(students = [], allSelections = [], subject
 
     return `
       <div style="${pageBreak}padding:20px">
-        ${buildHeader(`استمارة اختيار المواد — ${student.name}`, `Form No. ${i + 1} of ${students.length}`)}
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;font-size:12px">
-          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px">
-            <p style="margin:3px 0"><strong>الاسم:</strong> ${student.name || '—'}</p>
-            <p style="margin:3px 0"><strong>الصف:</strong> الصف ${student.grade}</p>
-            <p style="margin:3px 0"><strong>الرقم الوطني:</strong> ${student.national_id || '—'}</p>
+        <div class="print-shell">
+          ${buildHeader(`استمارة اختيار المواد — ${student.name}`, `Form No. ${i + 1} of ${students.length}`)}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;font-size:12px">
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px">
+              <p style="margin:3px 0"><strong>الاسم:</strong> ${student.name || '—'}</p>
+              <p style="margin:3px 0"><strong>الصف:</strong> الصف ${student.grade}</p>
+              <p style="margin:3px 0"><strong>الرقم الوطني:</strong> ${student.national_id || '—'}</p>
+            </div>
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px">
+              <p style="margin:3px 0"><strong>ولي الأمر:</strong> ${student.guardian_name || '—'}</p>
+              <p style="margin:3px 0"><strong>الهاتف:</strong> ${student.guardian_phone || '—'}</p>
+            </div>
           </div>
-          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px">
-            <p style="margin:3px 0"><strong>ولي الأمر:</strong> ${student.guardian_name || '—'}</p>
-            <p style="margin:3px 0"><strong>الهاتف:</strong> ${student.guardian_phone || '—'}</p>
-          </div>
-        </div>
-        <table style="margin-bottom:16px">
-          <thead>
-            <tr>
-              <th style="width:60px;text-align:center">الأولوية</th>
-              <th>المادة</th>
-              <th>Subject</th>
-              <th style="width:80px">الحالة</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${selectionRows || '<tr><td colspan="4" style="text-align:center;color:#9ca3af">لا توجد اختيارات</td></tr>'}
-          </tbody>
-        </table>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:11px;margin-top:20px">
-          <div>
-            <p style="margin:0 0 20px;font-weight:600">توقيع ولي الأمر / Guardian Signature:</p>
-            <div style="border-bottom:1px solid #374151;width:180px;height:1px"></div>
-          </div>
-          <div>
-            <p style="margin:0 0 20px;font-weight:600">توقيع المشرف / Supervisor Signature:</p>
-            <div style="border-bottom:1px solid #374151;width:180px;height:1px"></div>
+          <table style="margin-bottom:16px">
+            <thead>
+              <tr>
+                <th style="width:60px;text-align:center">الأولوية</th>
+                <th>المادة</th>
+                <th>Subject</th>
+                <th style="width:80px">الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${selectionRows || '<tr><td colspan="4" style="text-align:center;color:#9ca3af">لا توجد اختيارات</td></tr>'}
+            </tbody>
+          </table>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:11px;margin-top:20px">
+            <div>
+              <p style="margin:0 0 10px;font-weight:600">توقيع ولي الأمر / Guardian Signature:</p>
+              ${renderGuardianSignature(student)}
+            </div>
+            <div>
+              <p style="margin:0 0 10px;font-weight:600">توقيع المشرف / Supervisor Signature:</p>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+                <div class="signature-box">
+                  <div style="width:190px;border-bottom:1px solid #374151;height:38px"></div>
+                </div>
+                <div style="font-size:11px;color:#6b7280">المشرف المسؤول</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

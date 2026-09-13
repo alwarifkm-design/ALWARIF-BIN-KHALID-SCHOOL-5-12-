@@ -21,6 +21,7 @@ const GRADES = [5, 6, 7, 8, 9, 10, 11, 12]
 
 const EMPTY_FORM = {
   name: '',
+  student_code: '',
   grade: '',
   gender: 'male',
   national_id: '',
@@ -33,8 +34,11 @@ const EMPTY_FORM = {
   guardian_email: '',
   guardian_national_id: '',
   guardian_signature: false,
+  guardian_signature_data: '',
   guardian_signature_date: '',
   status: 'active',
+  transfer_date: '',
+  transfer_to: '',
   notes: '',
 }
 
@@ -70,6 +74,100 @@ function SignatureBadge({ signed }) {
   )
 }
 
+function SignatureCanvas({ value, onChange }) {
+  const canvasRef = React.useRef(null)
+  const [isDrawing, setIsDrawing] = React.useState(false)
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.strokeStyle = '#111827'
+
+    if (value) {
+      const img = new Image()
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0)
+      }
+      img.src = value
+    }
+  }, [value])
+
+  const getPoint = (event) => {
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    return {
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY,
+    }
+  }
+
+  const startDrawing = (event) => {
+    event.preventDefault()
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    const point = getPoint(event)
+    ctx.beginPath()
+    ctx.moveTo(point.x, point.y)
+    ctx.lineTo(point.x, point.y)
+    ctx.stroke()
+    setIsDrawing(true)
+  }
+
+  const moveDrawing = (event) => {
+    if (!isDrawing) return
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    const point = getPoint(event)
+    ctx.lineTo(point.x, point.y)
+    ctx.stroke()
+  }
+
+  const stopDrawing = () => {
+    if (!isDrawing) return
+    const canvas = canvasRef.current
+    const dataUrl = canvas.toDataURL('image/png')
+    onChange(dataUrl)
+    setIsDrawing(false)
+  }
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    onChange('')
+  }
+
+  return (
+    <div className="space-y-2">
+      <canvas
+        ref={canvasRef}
+        width={500}
+        height={180}
+        className="w-full rounded-md border border-border bg-white cursor-crosshair"
+        onMouseDown={startDrawing}
+        onMouseMove={moveDrawing}
+        onMouseUp={stopDrawing}
+        onMouseLeave={stopDrawing}
+      />
+      <div className="flex justify-end">
+        <button type="button" onClick={clearCanvas} className="text-xs text-red-600 hover:text-red-700 font-cairo">
+          مسح التوقيع
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ---- Dialog إضافة / تعديل الطالب ----
 function StudentDialog({ open, student, sections, onClose, onCreate, onUpdate, isLoading }) {
   const { t } = useLanguage()
@@ -78,7 +176,6 @@ function StudentDialog({ open, student, sections, onClose, onCreate, onUpdate, i
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
 
-  // تهيئة النموذج عند الفتح
   React.useEffect(() => {
     if (open) {
       setForm(student ? { ...EMPTY_FORM, ...student } : EMPTY_FORM)
@@ -119,7 +216,14 @@ function StudentDialog({ open, student, sections, onClose, onCreate, onUpdate, i
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!validate()) return
-    const data = { ...form, grade: Number(form.grade) }
+
+    const data = {
+      ...form,
+      grade: Number(form.grade),
+      guardian_signature: Boolean(form.guardian_signature || form.guardian_signature_data),
+      guardian_signature_date: form.guardian_signature_date || new Date().toISOString().split('T')[0],
+    }
+
     if (isEdit) {
       onUpdate({ id: student.id, ...data })
     } else {
@@ -156,6 +260,17 @@ function StudentDialog({ open, student, sections, onClose, onCreate, onUpdate, i
             بيانات الطالب
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* رقم الطالب */}
+            <Field label="رقم الطالب">
+              <input
+                type="text"
+                value={form.student_code}
+                onChange={e => set('student_code', e.target.value)}
+                placeholder="مثال: 2025-001"
+                className="input-base"
+              />
+            </Field>
+
             {/* الاسم */}
             <Field label="اسم الطالب" error={errors.name} required>
               <input
@@ -249,9 +364,33 @@ function StudentDialog({ open, student, sections, onClose, onCreate, onUpdate, i
               >
                 <option value="active">نشط</option>
                 <option value="inactive">غير نشط</option>
-                <option value="transferred">منقول</option>
+                <option value="transferred">باق</option>
+                <option value="graduated">ناجح</option>
               </select>
             </Field>
+
+            {(form.status === 'transferred' || form.status === 'graduated') && (
+              <Field label={form.status === 'transferred' ? 'تاريخ النقل' : 'تاريخ التخرج'}>
+                <input
+                  type="date"
+                  value={form.transfer_date}
+                  onChange={e => set('transfer_date', e.target.value)}
+                  className="input-base"
+                />
+              </Field>
+            )}
+
+            {(form.status === 'transferred') && (
+              <Field label="نقل إلى">
+                <input
+                  type="text"
+                  value={form.transfer_to}
+                  onChange={e => set('transfer_to', e.target.value)}
+                  placeholder="اسم المدرسة أو القسم"
+                  className="input-base"
+                />
+              </Field>
+            )}
           </div>
 
           {/* --- قسم بيانات ولي الأمر --- */}
@@ -305,30 +444,52 @@ function StudentDialog({ open, student, sections, onClose, onCreate, onUpdate, i
           </div>
 
           {/* توقيع ولي الأمر */}
-          <div className={`flex items-start gap-3 p-3 rounded-md border ${errors.guardian_signature ? 'border-red-400 bg-red-50' : 'border-border bg-muted/30'}`}>
-            <input
-              id="guardian_signature"
-              type="checkbox"
-              checked={!!form.guardian_signature}
-              onChange={e => set('guardian_signature', e.target.checked)}
-              className="mt-0.5 w-4 h-4 accent-[#065f46] cursor-pointer"
-            />
-            <div className="flex-1">
-              <label htmlFor="guardian_signature" className="text-sm font-semibold text-foreground font-cairo cursor-pointer">
-                توقيع ولي الأمر <span className="text-red-500">*</span>
-              </label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                لا يمكن تسجيل الطالب دون توقيع ولي الأمر وإضافة بياناته
-              </p>
-              {form.guardian_signature && form.guardian_signature_date && (
-                <p className="text-xs text-green-700 mt-1 font-semibold">
-                  تاريخ التوقيع: {form.guardian_signature_date}
+          <div className={`flex flex-col gap-3 p-3 rounded-md border ${errors.guardian_signature ? 'border-red-400 bg-red-50' : 'border-border bg-muted/30'}`}>
+            <div className="flex items-start gap-3">
+              <input
+                id="guardian_signature"
+                type="checkbox"
+                checked={Boolean(form.guardian_signature || form.guardian_signature_data)}
+                onChange={e => {
+                  const checked = e.target.checked
+                  set('guardian_signature', checked)
+                  if (!checked) {
+                    set('guardian_signature_data', '')
+                    set('guardian_signature_date', '')
+                  }
+                }}
+                className="mt-0.5 w-4 h-4 accent-[#065f46] cursor-pointer"
+              />
+              <div className="flex-1">
+                <label htmlFor="guardian_signature" className="text-sm font-semibold text-foreground font-cairo cursor-pointer">
+                  توقيع ولي الأمر <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  لا يمكن تسجيل الطالب دون توقيع ولي الأمر وإضافة بياناته
                 </p>
-              )}
-              {errors.guardian_signature && (
-                <p className="text-xs text-red-500 mt-1">{errors.guardian_signature}</p>
-              )}
+                {form.guardian_signature && form.guardian_signature_date && (
+                  <p className="text-xs text-green-700 mt-1 font-semibold">
+                    تاريخ التوقيع: {form.guardian_signature_date}
+                  </p>
+                )}
+                {errors.guardian_signature && (
+                  <p className="text-xs text-red-500 mt-1">{errors.guardian_signature}</p>
+                )}
+              </div>
             </div>
+
+            {(form.guardian_signature || form.guardian_signature_data) && (
+              <SignatureCanvas
+                value={form.guardian_signature_data || ''}
+                onChange={(data) => {
+                  set('guardian_signature_data', data)
+                  set('guardian_signature', Boolean(data))
+                  if (data && !form.guardian_signature_date) {
+                    set('guardian_signature_date', new Date().toISOString().split('T')[0])
+                  }
+                }}
+              />
+            )}
           </div>
 
           {/* الملاحظات */}
@@ -462,6 +623,40 @@ export default function StudentsPage() {
       onSettled: () => setDeleteTarget(null),
     })
   }, [deleteTarget, remove])
+
+  const handleTransfer = useCallback((student) => {
+    update.mutate({
+      id: student.id,
+      status: 'transferred',
+      transfer_date: new Date().toISOString().split('T')[0],
+      transfer_to: student.transfer_to || 'مدرسة أخرى',
+    })
+  }, [update])
+
+  const handleGraduate = useCallback((student) => {
+    update.mutate({
+      id: student.id,
+      status: 'graduated',
+      grade: 12,
+      transfer_date: new Date().toISOString().split('T')[0],
+      transfer_to: student.transfer_to || 'خريج',
+    })
+  }, [update])
+
+  const handleYearEndCleanup = useCallback(() => {
+    const idsToDelete = students
+      .filter((student) => student.status === 'graduated' && Number(student.grade) === 12)
+      .map((student) => student.id)
+
+    idsToDelete.forEach((id) => remove.mutate(id))
+  }, [students, remove])
+
+  React.useEffect(() => {
+    const currentMonth = new Date().getMonth() + 1
+    if (currentMonth >= 6) {
+      handleYearEndCleanup()
+    }
+  }, [handleYearEndCleanup])
 
   // ---- إضافة / تعديل ----
   const handleCreate = useCallback((data) => {
@@ -662,6 +857,20 @@ export default function StudentsPage() {
                     {/* الإجراءات */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleTransfer(student)}
+                          title="تسجيل باق"
+                          className="p-1.5 rounded text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                        >
+                          <Shuffle size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleGraduate(student)}
+                          title="تسجيل نجاح"
+                          className="p-1.5 rounded text-muted-foreground hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                        >
+                          <CheckCircle2 size={14} />
+                        </button>
                         <button
                           onClick={() => openEdit(student)}
                           title={t('students.edit_student')}

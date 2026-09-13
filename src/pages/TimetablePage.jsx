@@ -17,6 +17,7 @@ const DAY_LABELS = {
   3: 'الأربعاء',
   4: 'الخميس',
 }
+const HOLIDAY_STORAGE_KEY = 'school_holiday_days'
 
 // ---- مكوّن Dialog مدمج ----
 function SlotDialog({ open, onClose, slot, day, period, subjects, teachers, onSave, onDelete, saving, deleting }) {
@@ -216,8 +217,18 @@ export default function TimetablePage() {
 
   // State
   const [selectedSectionId, setSelectedSectionId] = useState('')
+  const [selectedTeacherId, setSelectedTeacherId] = useState('')
   const [dialogState, setDialogState] = useState(null)
   // dialogState: null | { day, period, slot: null|object }
+
+  const [holidayDays, setHolidayDays] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(HOLIDAY_STORAGE_KEY) || '[]')
+      return Array.isArray(saved) ? saved : []
+    } catch {
+      return []
+    }
+  })
 
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState('')
@@ -262,12 +273,41 @@ export default function TimetablePage() {
     return map
   }, [slots])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(HOLIDAY_STORAGE_KEY, JSON.stringify(holidayDays))
+    } catch {
+      // ignore storage limits
+    }
+  }, [holidayDays])
+
+  const toggleHolidayDay = (day) => {
+    setHolidayDays((prev) => prev.includes(day)
+      ? prev.filter((item) => item !== day)
+      : [...prev, day])
+  }
+
+  const teacherAssignments = useMemo(() => {
+    if (!selectedSectionId || !selectedTeacherId) return []
+    return slots
+      .filter((slot) => String(slot.teacher_id) === String(selectedTeacherId))
+      .sort((a, b) => (a.day ?? 99) - (b.day ?? 99) || (a.period ?? 99) - (b.period ?? 99))
+      .map((slot) => ({
+        day: DAY_LABELS[slot.day] || `اليوم ${slot.day}`,
+        period: slot.period,
+        subject: subjectMap[slot.subject_id]?.name_ar || subjectMap[slot.subject_id]?.name || '—',
+        room: slot.room || '—',
+      }))
+  }, [slots, selectedSectionId, selectedTeacherId, subjectMap])
+
   // ---- فتح Dialog ----
   const openAdd = (day, period) => {
+    if (holidayDays.includes(day)) return
     setDialogState({ day, period, slot: null })
   }
 
   const openEdit = (day, period) => {
+    if (holidayDays.includes(day)) return
     const slot = gridMap[`${day}-${period}`]
     setDialogState({ day, period, slot: slot || null })
   }
@@ -439,6 +479,44 @@ export default function TimetablePage() {
           </div>
         </div>
 
+        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+              فلتر المعلم
+            </label>
+            <select
+              className="input-base"
+              value={selectedTeacherId}
+              onChange={(e) => setSelectedTeacherId(e.target.value)}
+            >
+              <option value="">— كل المعلمين —</option>
+              {teachers.map((teacher) => (
+                <option key={teacher.id} value={teacher.id}>{teacher.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {DAYS.map((day) => {
+              const isHoliday = holidayDays.includes(day)
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => toggleHolidayDay(day)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                    isHoliday
+                      ? 'border-red-200 bg-red-50 text-red-700'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  }`}
+                >
+                  {isHoliday ? `${DAY_LABELS[day]} — عطلة` : `${DAY_LABELS[day]} — فعال`}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* رسالة الخطأ */}
         {generateError && (
           <div className="mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
@@ -521,6 +599,20 @@ export default function TimetablePage() {
                     </td>
                     {/* خلايا الأيام */}
                     {DAYS.map((day) => {
+                      if (holidayDays.includes(day)) {
+                        return (
+                          <td
+                            key={day}
+                            className="p-1.5 border-e border-border last:border-e-0 align-top bg-red-50"
+                            style={{ minWidth: 96 }}
+                          >
+                            <div className="flex min-h-[72px] items-center justify-center rounded-lg border border-red-200 bg-red-50 text-xs font-bold text-red-700">
+                              عطلة
+                            </div>
+                          </td>
+                        )
+                      }
+
                       const slot = gridMap[`${day}-${period}`]
                       return (
                         <td
@@ -543,6 +635,22 @@ export default function TimetablePage() {
               </tbody>
             </table>
           </div>
+
+          {selectedTeacherId && teacherAssignments.length > 0 && (
+            <div className="border-t border-border bg-muted/30 px-5 py-4">
+              <h3 className="text-sm font-bold text-foreground mb-3">جدول المعلم المختار</h3>
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {teacherAssignments.map((item, index) => (
+                  <div key={`${item.day}-${item.period}-${index}`} className="rounded-lg border border-border bg-white p-3">
+                    <div className="text-xs text-muted-foreground">{item.day}</div>
+                    <div className="mt-1 text-sm font-bold text-foreground">الحصة {item.period}</div>
+                    <div className="mt-1 text-sm text-[#065f46]">{item.subject}</div>
+                    <div className="text-xs text-muted-foreground">غرفة {item.room}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Footer — ملخص */}
           <div className="px-5 py-3 border-t border-border bg-muted/30 flex items-center justify-between text-xs text-muted-foreground">

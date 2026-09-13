@@ -18,6 +18,9 @@ const StudentsPage = lazy(() => import('./pages/StudentsPage.jsx'))
 const SectionsPage = lazy(() => import('./pages/SectionsPage.jsx'))
 const TeachersPage = lazy(() => import('./pages/TeachersPage.jsx'))
 const SubjectsPage = lazy(() => import('./pages/SubjectsPage.jsx'))
+const AttendancePage = lazy(() => import('./pages/AttendancePage.jsx'))
+const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'))
+const CertificatesPage = lazy(() => import('./pages/CertificatesPage.jsx'))
 const TimetablePage = lazy(() => import('./pages/TimetablePage.jsx'))
 const ViolationsPage = lazy(() => import('./pages/ViolationsPage.jsx'))
 const SubjectFormsPage = lazy(() => import('./pages/SubjectFormsPage.jsx'))
@@ -109,6 +112,30 @@ export default function App() {
                   element={
                     <Suspense fallback={<PageLoader />}>
                       <SubjectsPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/attendance"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AttendancePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ReportsPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/certificates"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <CertificatesPage />
                     </Suspense>
                   }
                 />

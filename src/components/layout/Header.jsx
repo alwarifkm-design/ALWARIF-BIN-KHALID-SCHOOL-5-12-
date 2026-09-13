@@ -2,11 +2,13 @@ import React from 'react'
 import { LogOut, Globe, User } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext.jsx'
 import { useAuth } from '../../contexts/AuthContext.jsx'
+import { base44Client } from '../../api/base44Client.js'
 import logoUrl from '../../../1.png'
 
 export default function Header() {
   const { t, language, toggleLanguage } = useLanguage()
   const { user, logout } = useAuth()
+  const schoolSettings = base44Client.auth.getSchoolSettings()
 
   return (
     <header className="no-print sticky top-0 z-40 h-16 bg-card border-b border-border shadow-sm flex items-center px-4 md:px-6 gap-4">
@@ -19,10 +21,10 @@ export default function Header() {
         />
         <div className="hidden sm:block">
           <p className="text-sm font-bold font-cairo text-foreground leading-tight">
-            {language === 'ar' ? t('common.school_name') : t('common.school_name_en')}
+            {language === 'ar' ? (schoolSettings.school_name || t('common.school_name')) : (schoolSettings.school_name_en || t('common.school_name_en'))}
           </p>
           <p className="text-xs text-muted-foreground leading-tight">
-            {language === 'ar' ? t('common.school_subtitle') : t('common.school_subtitle_en')}
+            {language === 'ar' ? (schoolSettings.school_subtitle || t('common.school_subtitle')) : (schoolSettings.school_subtitle_en || t('common.school_subtitle_en'))}
           </p>
         </div>
       </div>

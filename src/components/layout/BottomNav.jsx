@@ -1,12 +1,15 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, Users, Calendar, ShieldAlert, Settings } from 'lucide-react'
+import { Home, Users, Calendar, ShieldAlert, Settings, ClipboardCheck, BarChart3, Award } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext.jsx'
 import { cn } from '../../lib/utils.js'
 
 const bottomItems = [
   { to: '/',           icon: Home,        key: 'home',       exact: true },
   { to: '/students',   icon: Users,       key: 'students' },
+  { to: '/attendance', icon: ClipboardCheck, key: 'attendance' },
+  { to: '/reports',    icon: BarChart3,   key: 'reports' },
+  { to: '/certificates', icon: Award,      key: 'certificates' },
   { to: '/timetable',  icon: Calendar,    key: 'timetable' },
   { to: '/violations', icon: ShieldAlert, key: 'violations' },
   { to: '/settings',   icon: Settings,    key: 'settings' },

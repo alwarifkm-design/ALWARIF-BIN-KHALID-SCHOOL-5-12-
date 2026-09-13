@@ -405,6 +405,7 @@ export const base44Client = {
     Subject: createSupabaseEntity('subjects'),
     TimetableSlot: createSupabaseEntity('timetable_slots'),
     Violation: createSupabaseEntity('violations'),
+    Attendance: createSupabaseEntity('attendance'),
     SubjectForm: createSupabaseEntity('subject_forms'),
     Supervisor: createSupabaseEntity('accounts'),
   },
