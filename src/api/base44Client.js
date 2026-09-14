@@ -50,6 +50,41 @@ function passwordMatches(account, candidatePassword) {
   )
 }
 
+function validateAccountInput(data, { requirePassword = true } = {}) {
+  const email = String(data?.email || '').trim().toLowerCase()
+  const name = String(data?.name || '').trim()
+  const phone = String(data?.phone || '').trim()
+
+  if (!name) {
+    throw new Error('يرجى إدخال اسم الحساب')
+  }
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('يرجى إدخال بريد إلكتروني صحيح')
+  }
+
+  if (requirePassword && (!data?.password || String(data.password).trim().length < 8)) {
+    throw new Error('يجب أن تكون كلمة المرور 8 أحرف على الأقل')
+  }
+
+  if (data?.password && String(data.password).trim().length > 0 && String(data.password).trim().length < 8) {
+    throw new Error('يجب أن تكون كلمة المرور 8 أحرف على الأقل')
+  }
+
+  if (phone && !/^\+?[0-9\s\-()]{7,20}$/.test(phone)) {
+    throw new Error('يرجى إدخال رقم هاتف صحيح')
+  }
+
+  return {
+    ...data,
+    name,
+    email,
+    phone,
+    role: data?.role || 'supervisor',
+    status: data?.status || 'active',
+  }
+}
+
 function normalizeAccount(account) {
   if (!account) return null
   return {
@@ -166,7 +201,7 @@ export const base44Client = {
       const accounts = getAccounts()
       const user = accounts.find(account => account.email.toLowerCase() === String(email || '').trim().toLowerCase())
 
-      if (!user || user.password !== hashPassword(password)) {
+      if (!user || !passwordMatches(user, password)) {
         throw new Error('Invalid credentials')
       }
 
@@ -183,7 +218,9 @@ export const base44Client = {
     },
 
     async register(data) {
-      const email = String(data?.email || '').trim().toLowerCase()
+      const normalized = validateAccountInput(data, { requirePassword: true })
+      const email = normalized.email
+
       if (supabase && hasSupabaseConfig()) {
         const { data: existing, error: checkError } = await supabase.from('accounts').select('id').eq('email', email).maybeSingle()
         if (checkError) throw checkError
@@ -196,13 +233,13 @@ export const base44Client = {
         }
 
         const accountPayload = {
-          name: data.name,
+          name: normalized.name,
           email,
-          password: data.password,
-          plain_password: data.password,
-          role: data.role || 'supervisor',
-          phone: data.phone || '',
-          status: data.status || 'active',
+          password: normalized.password,
+          plain_password: normalized.password,
+          role: normalized.role,
+          phone: normalized.phone,
+          status: normalized.status,
         }
 
         const { data: saved, error } = await supabase.from('accounts').insert(accountPayload).select().single()
@@ -213,10 +250,6 @@ export const base44Client = {
 
       const accounts = getAccounts()
       const registrationCode = String(data?.registration_code || '').trim().toUpperCase()
-
-      if (!data?.name || !email || !data?.password) {
-        throw new Error('Missing required data')
-      }
 
       if (accounts.some(account => account.email === email)) {
         throw new Error('Account already exists')
@@ -229,13 +262,13 @@ export const base44Client = {
 
       const account = normalizeAccount({
         id: makeId('user'),
-        name: data.name,
+        name: normalized.name,
         email,
-        password: hashPassword(data.password),
-        plain_password: data.password,
-        role: data.role || 'supervisor',
-        phone: data.phone || '',
-        status: data.status || 'active',
+        password: hashPassword(normalized.password),
+        plain_password: normalized.password,
+        role: normalized.role,
+        phone: normalized.phone,
+        status: normalized.status,
         created_at: new Date().toISOString(),
       })
 
@@ -315,11 +348,17 @@ export const base44Client = {
     },
 
     async updateAccount(id, data) {
+      const normalized = validateAccountInput(
+        { ...data, email: data?.email || '', name: data?.name || '', phone: data?.phone || '' },
+        { requirePassword: false }
+      )
+
       if (supabase && hasSupabaseConfig()) {
-        const payload = { ...data }
+        const payload = { ...normalized }
         if (payload.password) {
           payload.plain_password = payload.password
         }
+        delete payload.password
         const { data: updated, error } = await supabase.from('accounts').update(payload).eq('id', id).select().single()
         if (error) throw error
         return { ...updated, password: undefined, plain_password: updated.plain_password || '' }
@@ -329,8 +368,8 @@ export const base44Client = {
       const index = accounts.findIndex(account => account.id === id)
       if (index === -1) throw new Error('Account not found')
 
-      const next = { ...accounts[index], ...data }
-      if (data.password) {
+      const next = { ...accounts[index], ...normalized }
+      if (data?.password) {
         next.password = hashPassword(data.password)
         next.plain_password = data.password
       }
@@ -368,20 +407,25 @@ export const base44Client = {
       return next
     },
     setManagerPassword(value) {
+      const nextValue = String(value || '').trim()
+      if (!nextValue || nextValue.length < 8) {
+        throw new Error('يجب أن تكون كلمة مرور المدير 8 أحرف على الأقل')
+      }
+
       if (supabase && hasSupabaseConfig()) {
-        return supabase.from('accounts').update({ password: value, plain_password: value }).eq('role', 'admin').select().single().then(({ data, error }) => {
+        return supabase.from('accounts').update({ password: nextValue, plain_password: nextValue }).eq('role', 'admin').select().single().then(({ data, error }) => {
           if (error) throw error
-          return { ...data, password: undefined, plain_password: value }
+          return { ...data, password: undefined, plain_password: nextValue }
         })
       }
 
       const accounts = getAccounts()
       const admin = accounts.find((account) => account.role === 'admin')
       if (!admin) throw new Error('Manager account not found')
-      admin.password = hashPassword(value)
-      admin.plain_password = value
+      admin.password = hashPassword(nextValue)
+      admin.plain_password = nextValue
       saveAccounts(accounts)
-      return { ...admin, password: undefined, plain_password: value }
+      return { ...admin, password: undefined, plain_password: nextValue }
     },
     getRegistrationCode() {
       const state = getRegistrationCodeState()

@@ -19,6 +19,19 @@ import ConfirmDialog from '../components/shared/ConfirmDialog.jsx'
 // ---- ثوابت ----
 const GRADES = [5, 6, 7, 8, 9, 10, 11, 12]
 
+const STATUS_LABELS = {
+  active: 'باق',
+  inactive: 'غير نشط',
+  transferred: 'منقول',
+  graduated: 'ناجح',
+}
+
+function generateStudentCode() {
+  const datePart = new Date().toISOString().slice(2, 10).replace(/-/g, '')
+  const randomPart = Math.floor(1000 + Math.random() * 9000)
+  return `ST-${datePart}-${randomPart}`
+}
+
 const EMPTY_FORM = {
   name: '',
   student_code: '',
@@ -207,7 +220,11 @@ function StudentDialog({ open, student, sections, onClose, onCreate, onUpdate, i
     if (!form.name?.trim()) e.name = 'اسم الطالب مطلوب'
     if (!form.grade) e.grade = 'الصف مطلوب'
     if (!form.guardian_name?.trim()) e.guardian_name = 'اسم ولي الأمر مطلوب'
-    if (!form.guardian_phone?.trim()) e.guardian_phone = 'هاتف ولي الأمر مطلوب'
+    if (!form.guardian_phone?.trim()) {
+      e.guardian_phone = 'هاتف ولي الأمر مطلوب'
+    } else if (!/^\+?[0-9\s-]{8,15}$/.test(form.guardian_phone.trim())) {
+      e.guardian_phone = 'رقم الهاتف يجب أن يحتوي على أرقام فقط ويكون صحيحاً'
+    }
     if (!form.guardian_signature) e.guardian_signature = 'توقيع ولي الأمر مطلوب'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -217,9 +234,13 @@ function StudentDialog({ open, student, sections, onClose, onCreate, onUpdate, i
     e.preventDefault()
     if (!validate()) return
 
+    const nextStudentCode = form.student_code?.trim() || generateStudentCode()
+
     const data = {
       ...form,
+      student_code: nextStudentCode,
       grade: Number(form.grade),
+      guardian_phone: form.guardian_phone.trim(),
       guardian_signature: Boolean(form.guardian_signature || form.guardian_signature_data),
       guardian_signature_date: form.guardian_signature_date || new Date().toISOString().split('T')[0],
     }
@@ -362,10 +383,10 @@ function StudentDialog({ open, student, sections, onClose, onCreate, onUpdate, i
                 onChange={e => set('status', e.target.value)}
                 className="input-base"
               >
-                <option value="active">نشط</option>
-                <option value="inactive">غير نشط</option>
-                <option value="transferred">باق</option>
-                <option value="graduated">ناجح</option>
+                <option value="active">{STATUS_LABELS.active}</option>
+                <option value="inactive">{STATUS_LABELS.inactive}</option>
+                <option value="transferred">{STATUS_LABELS.transferred}</option>
+                <option value="graduated">{STATUS_LABELS.graduated}</option>
               </select>
             </Field>
 
@@ -642,21 +663,6 @@ export default function StudentsPage() {
       transfer_to: student.transfer_to || 'خريج',
     })
   }, [update])
-
-  const handleYearEndCleanup = useCallback(() => {
-    const idsToDelete = students
-      .filter((student) => student.status === 'graduated' && Number(student.grade) === 12)
-      .map((student) => student.id)
-
-    idsToDelete.forEach((id) => remove.mutate(id))
-  }, [students, remove])
-
-  React.useEffect(() => {
-    const currentMonth = new Date().getMonth() + 1
-    if (currentMonth >= 6) {
-      handleYearEndCleanup()
-    }
-  }, [handleYearEndCleanup])
 
   // ---- إضافة / تعديل ----
   const handleCreate = useCallback((data) => {

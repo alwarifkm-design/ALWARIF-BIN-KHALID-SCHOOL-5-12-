@@ -5,6 +5,8 @@ import { useLanguage } from '../contexts/LanguageContext.jsx'
 import PrintArea from '../components/shared/PrintArea.jsx'
 
 const CERTIFICATE_TYPES = [
+  { value: 'grades', label: 'شهادة الدرجات' },
+  { value: 'appreciation', label: 'شهادة شكر وتقدير' },
   { value: 'completion', label: 'شهادة إنجاز' },
   { value: 'honor', label: 'شهادة شرف' },
   { value: 'conduct', label: 'شهادة حسن سلوك' },
@@ -12,6 +14,8 @@ const CERTIFICATE_TYPES = [
 
 function buildCertificateHtml(student, type, schoolName, schoolSubtitle) {
   const titleMap = {
+    grades: 'شهادة الدرجات',
+    appreciation: 'شهادة شكر وتقدير',
     completion: 'شهادة إنجاز',
     honor: 'شهادة شرف',
     conduct: 'شهادة حسن سلوك',

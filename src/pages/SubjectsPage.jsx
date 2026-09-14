@@ -28,7 +28,6 @@ function SubjectDialog({ open, subject, onClose, onSave }) {
   const defaultForm = {
     name_ar: '',
     name_en: '',
-    code: '',
     grade: '',
     is_elective: false,
     hours_per_week: 3,
@@ -53,7 +52,6 @@ function SubjectDialog({ open, subject, onClose, onSave }) {
         ? {
             name_ar: subject.name_ar || subject.name || '',
             name_en: subject.name_en || '',
-            code: subject.code || '',
             grade: subject.grade || '',
             is_elective: subject.is_elective || false,
             hours_per_week: subject.hours_per_week ?? 3,
@@ -125,36 +123,22 @@ function SubjectDialog({ open, subject, onClose, onSave }) {
             />
           </div>
 
-          {/* الرمز والصف */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium font-cairo text-foreground mb-1">
-                {t('subjects.code')}
-              </label>
-              <input
-                className="input-base"
-                value={form.code}
-                onChange={(e) => setForm(f => ({ ...f, code: e.target.value }))}
-                placeholder="MATH10"
-                dir="ltr"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium font-cairo text-foreground mb-1">
-                {t('common.grade')} <span className="text-destructive">*</span>
-              </label>
-              <select
-                className="input-base"
-                value={form.grade}
-                onChange={(e) => setForm(f => ({ ...f, grade: e.target.value }))}
-              >
-                <option value="">{t('common.all')}</option>
-                {grades.map(g => (
-                  <option key={g} value={g}>{t('common.grade')} {g}</option>
-                ))}
-              </select>
-              {errors.grade && <p className="text-xs text-destructive mt-1">{errors.grade}</p>}
-            </div>
+          {/* الصف وحقول الحصص */}
+          <div>
+            <label className="block text-sm font-medium font-cairo text-foreground mb-1">
+              {t('common.grade')} <span className="text-destructive">*</span>
+            </label>
+            <select
+              className="input-base"
+              value={form.grade}
+              onChange={(e) => setForm(f => ({ ...f, grade: e.target.value }))}
+            >
+              <option value="">جميع الصفوف</option>
+              {grades.map(g => (
+                <option key={g} value={g}>{t('common.grade')} {g}</option>
+              ))}
+            </select>
+            {errors.grade && <p className="text-xs text-destructive mt-1">{errors.grade}</p>}
           </div>
 
           {/* الساعات الأسبوعية */}

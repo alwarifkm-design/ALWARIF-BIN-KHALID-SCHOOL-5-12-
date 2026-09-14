@@ -26,6 +26,7 @@ export default function SettingsPage() {
   const [showPasswords, setShowPasswords] = useState({})
   const [managerPassword, setManagerPassword] = useState('Admin@123')
   const [schoolSettings, setSchoolSettings] = useState(base44Client.auth.getSchoolSettings())
+  const [formMessage, setFormMessage] = useState('')
 
   const isAdmin = user?.role === 'admin'
 
@@ -72,16 +73,26 @@ export default function SettingsPage() {
   }
 
   const handleSave = async () => {
+    setFormMessage('')
+
     const payload = {
       name: form.name.trim(),
       phone: form.phone.trim(),
       email: form.email.trim().toLowerCase(),
       role: form.role || 'supervisor',
       status: form.status || 'active',
-      ...(form.password ? { password: form.password } : {}),
+      ...(form.password ? { password: form.password.trim() } : {}),
     }
 
-    if (!payload.name || !payload.email) return
+    if (!payload.name || !payload.email) {
+      setFormMessage('يرجى إدخال الاسم والبريد الإلكتروني')
+      return
+    }
+
+    if (payload.password && payload.password.length < 8) {
+      setFormMessage('يجب أن تكون كلمة المرور 8 أحرف على الأقل')
+      return
+    }
 
     try {
       if (editingId) {
@@ -95,8 +106,9 @@ export default function SettingsPage() {
       setFormOpen(false)
       setEditingId(null)
       setForm(EMPTY_FORM)
+      setFormMessage('')
     } catch (err) {
-      alert(err.message || 'حدث خطأ')
+      setFormMessage(err.message || 'حدث خطأ')
     }
   }
 
@@ -122,23 +134,30 @@ export default function SettingsPage() {
   }
 
   const handleManagerPasswordChange = async () => {
-    if (!managerPassword || managerPassword.length < 8) {
+    const trimmed = managerPassword.trim()
+    if (!trimmed || trimmed.length < 8) {
       alert('يجب أن تكون كلمة المرور 8 أحرف على الأقل')
       return
     }
-    await base44Client.auth.setManagerPassword(managerPassword)
-    alert('تم تحديث كلمة مرور المدير بنجاح')
+    try {
+      await base44Client.auth.setManagerPassword(trimmed)
+      alert('تم تحديث كلمة مرور المدير بنجاح')
+    } catch (err) {
+      alert(err.message || 'حدث خطأ أثناء تحديث كلمة مرور المدير')
+    }
   }
 
   const handleSchoolSettingsSave = () => {
-    const next = base44Client.auth.saveSchoolSettings({
+    const nextValue = {
       ...schoolSettings,
       school_name: schoolSettings.school_name?.trim() || 'الوارف بن خالد 5-12',
       school_name_en: schoolSettings.school_name_en?.trim() || 'Alwarif Bin Khalid 5-12',
       school_subtitle: schoolSettings.school_subtitle?.trim() || 'نظام إدارة المدرسة',
       school_subtitle_en: schoolSettings.school_subtitle_en?.trim() || 'School Management System',
-    })
-    setSchoolSettings(next)
+    }
+
+    const settings = base44Client.auth.saveSchoolSettings(nextValue)
+    setSchoolSettings(settings)
     alert('تم حفظ بيانات المدرسة بنجاح')
   }
 
@@ -415,6 +434,12 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
+              {formMessage && (
+                <div className="md:col-span-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {formMessage}
+                </div>
+              )}
+
               <div className="md:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-foreground">الاسم *</label>
                 <input
